@@ -8,7 +8,6 @@ export async function isDateBlocked(date: string): Promise<boolean> {
 }
 
 export async function seedSlotsIfNeeded(date: string): Promise<void> {
-  // Fixed: cast to ::date so Postgres does proper date comparison
   const existing = await sql`
     SELECT 1 FROM TimeSlots WHERE date = ${date}::date LIMIT 1
   `;
@@ -16,15 +15,14 @@ export async function seedSlotsIfNeeded(date: string): Promise<void> {
 
   const dayOfWeek = new Date(date + 'T00:00:00').getUTCDay(); // 0 = Sun
 
-  // Clinic hours:
-  // Mon–Sat: 9:00 AM – 7:30 PM (last slot)
-  // Sunday:  9:00 AM – 1:00 PM (emergency only, but still seed slots)
+  // Clinic working hours (matches appointment page display):
+  // Mon–Sat: 9:30 AM – 7:30 PM (last slot starts at 7:30)
+  // Sunday:  9:30 AM – 1:00 PM
   const endHour   = dayOfWeek === 0 ? 13 : 19;
   const endMinute = dayOfWeek === 0 ?  0 : 30;
 
   const slots: string[] = [];
-  // Fixed: start at 9:00 AM (was 9:30 AM)
-  let h = 9, m = 0;
+  let h = 9, m = 30; // Start at 9:30 AM
   while (h < endHour || (h === endHour && m <= endMinute)) {
     slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
     m += 30;

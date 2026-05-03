@@ -1,14 +1,14 @@
 // app/api/book/route.ts
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { sendOutreachTemplate } from '@/lib/whatsapp'; 
+import { sendOutreachTemplate } from '@/lib/whatsapp';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { name, phone, email, reason } = body;
 
-    // ── Validation ────────────────────────────────────────────────────────────
+    // ── Validation ─────────────────────────────────────────────────────────
     if (!name || !phone) {
       return NextResponse.json(
         { error: 'Name and phone are required.' },
@@ -16,7 +16,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate Indian mobile number (10 digits starting with 6–9)
     const cleanPhone = String(phone).replace(/\D/g, '');
     if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
       return NextResponse.json(
@@ -25,10 +24,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Meta API needs the country code prefix
     const whatsappPhone = `91${cleanPhone}`;
 
-    // ── Upsert patient ────────────────────────────────────────────────────────
+    // ── Upsert patient ──────────────────────────────────────────────────────
     const patientResult = await sql`
       INSERT INTO Patients (name, phone, email)
       VALUES (${name.trim()}, ${whatsappPhone}, ${email?.trim() ?? null})
@@ -39,22 +37,27 @@ export async function POST(request: Request) {
     `;
     const patientId = patientResult[0].id;
 
-    // ── Create pending appointment ────────────────────────────────────────────
+    // ── Create pending appointment ──────────────────────────────────────────
     await sql`
       INSERT INTO Appointments (patient_id, reason, status)
       VALUES (${patientId}, ${reason?.trim() ?? null}, 'Pending')
     `;
 
-    // ── SEND THE INITIATION TEMPLATE (2. ADDED THIS BLOCK) ───────────────────
-    // This triggers the first message to the patient automatically via Meta!
-    // Variables match {{1}} and {{2}} in your Meta template
-    const variables = [name.trim(), reason?.trim() || "your dental visit"];
-    await sendOutreachTemplate(whatsappPhone, "booking_initiation", variables);
+    // ── Send initiation template ────────────────────────────────────────────
+    // The clinic sends the first WhatsApp message automatically.
+    // Template "booking_initiation" must be approved in Meta dashboard.
+    // {{1}} = patient name, {{2}} = reason for visit
+    // When the patient replies to this message, the 24-hour free window
+    // opens and the webhook sends the slot list at no cost.
+    await sendOutreachTemplate(
+      whatsappPhone,
+      'booking_initiation',
+      [name.trim(), reason?.trim() || 'your dental visit']
+    );
 
     return NextResponse.json({
       success: true,
       message: 'Appointment initiated. WhatsApp message sent.',
-      whatsapp_phone: whatsappPhone,
     });
 
   } catch (error) {

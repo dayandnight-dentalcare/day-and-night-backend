@@ -1,6 +1,7 @@
 // app/api/admin/slots/route.ts
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { seedSlotsIfNeeded } from '@/lib/slots';
 
 function isAuthorized(request: Request): boolean {
   return request.headers.get('authorization') === `Bearer ${process.env.ADMIN_SECRET}`;
@@ -22,6 +23,8 @@ export async function GET(request: Request) {
         { status: 400 }
       );
     }
+
+    await seedSlotsIfNeeded(date);
 
     const slots = await sql`
       SELECT
