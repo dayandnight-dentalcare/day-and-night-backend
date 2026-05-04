@@ -55,7 +55,6 @@ await sendOutreachTemplate(
       [
         name.trim(), 
         reason?.trim() || 'your dental visit',
-        'https://dayandnightdentalclinic.com/appointment' // Send the 3rd variable!
       ]
     );
 
