@@ -49,10 +49,14 @@ export async function POST(request: Request) {
     // {{1}} = patient name, {{2}} = reason for visit
     // When the patient replies to this message, the 24-hour free window
     // opens and the webhook sends the slot list at no cost.
-    await sendOutreachTemplate(
+await sendOutreachTemplate(
       whatsappPhone,
       'booking_initiation',
-      [name.trim(), reason?.trim() || 'your dental visit']
+      [
+        name.trim(), 
+        reason?.trim() || 'your dental visit',
+        'https://dayandnightdentalclinic.com/appointment' // Send the 3rd variable!
+      ]
     );
 
     return NextResponse.json({

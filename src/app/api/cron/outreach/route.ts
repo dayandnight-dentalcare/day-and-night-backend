@@ -47,7 +47,7 @@ export async function GET(request: Request) {
          const variables = [
            job.patient_name,
            job.disease || "your dental health",
-           "https://dayandnightclinic.in/appointment" // Replace with your actual frontend URL if different
+           'https://dayandnightdentalclinic.com/appointment' // Replace with your actual frontend URL if different
          ];
 
          // Fire the Meta API
