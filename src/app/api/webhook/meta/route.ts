@@ -236,19 +236,25 @@ if (selectedId.startsWith('MORE_')) {
             return;
           }
 
+          
           // Find patient by phone
           const patientResult = await sql`SELECT id FROM Patients WHERE phone = ${senderPhone}`;
 
           if (patientResult.length === 0) {
+            // Grab their actual WhatsApp name instead of using 'Unknown'
+            const profileName = body.entry?.[0]?.changes?.[0]?.value?.contacts?.[0]?.profile?.name || 'WhatsApp User';
+
             const newPatient = await sql`
               INSERT INTO Patients (name, phone)
-              VALUES ('Unknown', ${senderPhone})
+              VALUES (${profileName}, ${senderPhone})
               ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone
               RETURNING id
             `;
+            
+            // Add a default "reason" so the database doesn't reject it
             await sql`
-              INSERT INTO Appointments (patient_id, slot_id, status)
-              VALUES (${newPatient[0].id}, ${selectedSlotId}, 'Confirmed')
+              INSERT INTO Appointments (patient_id, slot_id, status, reason)
+              VALUES (${newPatient[0].id}, ${selectedSlotId}, 'Confirmed', 'WhatsApp Widget Booking')
             `;
           } else {
             const patientId = patientResult[0].id;
@@ -268,13 +274,13 @@ if (selectedId.startsWith('MORE_')) {
             `;
 
             if (updated.length === 0) {
+              // Add the default "reason" here too!
               await sql`
-                INSERT INTO Appointments (patient_id, slot_id, status)
-                VALUES (${patientId}, ${selectedSlotId}, 'Confirmed')
+                INSERT INTO Appointments (patient_id, slot_id, status, reason)
+                VALUES (${patientId}, ${selectedSlotId}, 'Confirmed', 'WhatsApp Widget Booking')
               `;
             }
           }
-
 // Inside Scenario B.2: Patient picked a TIME SLOT
 const slot = lockResult[0];
 

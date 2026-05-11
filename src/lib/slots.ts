@@ -22,7 +22,7 @@ export async function seedSlotsIfNeeded(date: string): Promise<void> {
   // Mon–Sat: 9:30 AM – 7:30 PM
   // Sunday: 9:30 AM – 1:00 PM
   const endHour = dayOfWeek === 0 ? 13 : 19;
-  const endMinute = dayOfWeek === 0 ? 0 : 30; // Changed to 30 to include the 7:30 slot
+  const endMinute = 0;
 
   const slotsToInsert: string[] = [];
   let h = 9, minuteCounter = 30; 
