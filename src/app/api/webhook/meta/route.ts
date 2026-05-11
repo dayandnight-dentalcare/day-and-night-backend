@@ -26,27 +26,29 @@ function getTodayIST(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 }
 
-/**
- * Returns the next N available (non-blocked) clinic dates starting from today.
- * Skips fully blocked dates.
- */
 async function getUpcomingDates(count = 6): Promise<{ value: string; label: string }[]> {
   const dates: { value: string; label: string }[] = [];
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-
-  let d = new Date(now);
+  
+  // 1. Get Today's YYYY-MM-DD string specifically in IST
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  
+  // 2. Break it into numbers to create a "Local" Date object (prevents 7 PM roll-over)
+  const [year, month, day] = todayStr.split('-').map(Number);
+  let d = new Date(year, month - 1, day); 
+  
   let checked = 0;
-
   while (dates.length < count && checked < 30) {
-    const iso = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
+    // 3. Format back to YYYY-MM-DD manually
+    const iso = d.getFullYear() + '-' + 
+                String(d.getMonth() + 1).padStart(2, '0') + '-' + 
+                String(d.getDate()).padStart(2, '0');
 
     const blocked = await isDateBlocked(iso);
     if (!blocked) {
       const label = d.toLocaleDateString('en-IN', {
         weekday: 'short',
         day: 'numeric',
-        month: 'short',
-        timeZone: 'Asia/Kolkata',
+        month: 'short'
       });
       dates.push({ value: iso, label });
     }
@@ -54,7 +56,6 @@ async function getUpcomingDates(count = 6): Promise<{ value: string; label: stri
     d.setDate(d.getDate() + 1);
     checked++;
   }
-
   return dates;
 }
 
@@ -274,16 +275,25 @@ if (selectedId.startsWith('MORE_')) {
             }
           }
 
-          // Send confirmation
-          const slot    = lockResult[0];
-          const dateStr = new Date(slot.date as string).toLocaleDateString('en-IN', {
-            weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata',
-          });
+// Inside Scenario B.2: Patient picked a TIME SLOT
+const slot = lockResult[0];
 
-          await sendWhatsAppText(
-            senderPhone,
-            `✅ *Appointment Confirmed!*\n\nYour appointment is scheduled for:\n📅 *${dateStr}*\n🕐 *${selectedTitle}*\n\nPlease arrive 5 minutes early. See you at Day & Night Dental Clinic! 🦷`
-          );
+// If slot.date is already a Date object or a string from SQL:
+const dateObj = new Date(slot.date);
+const sYear = dateObj.getFullYear();
+const sMonth = dateObj.getMonth() + 1; // getMonth is 0-indexed
+const sDay = dateObj.getDate();
+
+const dateStr = new Date(sYear, sMonth - 1, sDay).toLocaleDateString('en-IN', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+});
+
+await sendWhatsAppText(
+  senderPhone,
+  `✅ *Appointment Confirmed!*\n\nYour appointment is scheduled for:\n📅 *${dateStr}*\n🕐 *${selectedTitle}*\n\nPlease arrive 5 minutes early. See you at Day & Night Dental Clinic! 🦷`
+);
         }
       }
 
